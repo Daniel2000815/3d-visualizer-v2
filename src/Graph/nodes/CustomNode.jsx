@@ -51,7 +51,9 @@ export default function CustomNode({
               label={title}
             />
           ) }
+          <div className="nodrag">
           <Shader />
+          </div>
         </div>
       )}
 

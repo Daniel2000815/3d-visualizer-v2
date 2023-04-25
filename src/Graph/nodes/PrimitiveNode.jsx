@@ -3,7 +3,6 @@ import { Handle } from "reactflow";
 import { shallow } from "zustand/shallow";
 import { tw } from "twind";
 import { useStore } from "../../store";
-import Shader from "../../Shader/Shader";
 
 import CustomNode from "./CustomNode";
 

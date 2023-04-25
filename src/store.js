@@ -15,24 +15,9 @@ import { InputMode } from "./Types/InputMode";
 
 export const useStore = create((set, get) => ({
   nodes: [
-    {
-      id: "osc",
-      type: "osc",
-      data: { frequency: 220, type: "square" },
-      position: { x: 0, y: -100 },
-    },
-    {
-      id: "amp",
-      type: "amp",
-      data: { gain: 0.5 },
-      position: { x: -100, y: 100 },
-    },
-    { id: "output", type: "out", position: { x: 50, y: 250 } },
     { id: "primitive", type: "primitive", position: { x: 0, y: 0 } },
   ],
   edges: [
-    { id: "osc->amp", source: "osc", target: "amp" },
-    { id: "amp->output", source: "amp", target: "output" },
   ],
   primitives: [
     {
