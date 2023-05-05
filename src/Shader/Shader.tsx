@@ -1,5 +1,5 @@
 //@flow
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo, useRef } from "react";
 
 import { useStore } from "../store";
 import { shallow } from "zustand/shallow";
@@ -10,6 +10,7 @@ import { Shaders, Node, GLSL, Visitor, ShaderIdentifier } from "gl-react";
 import { Surface } from "gl-react-dom";
 import { fs } from "./fragmentShader";
 import { defaultMaterial } from "./defaultMaterial";
+import { setFips } from "crypto";
 
 const defaultShader = Shaders.create({
   helloGL: {
@@ -35,8 +36,9 @@ const defaultShader = Shaders.create({
 });
 
 const selector = () => (store: any) => ({
-  savedPrimitives: store.primitives.map(
-    (p: any) => `
+  savedPrimitives: store.primitives
+    .map(
+      (p: any) => `
     float ${p.fHeader}{
       float x = p.r;
       float y = p.g;
@@ -45,10 +47,13 @@ const selector = () => (store: any) => ({
       return ${p.parsedInput};
     }\n
   `
-  ).join("\n"),
+    )
+    .join("\n"),
 });
 
-export default function Shader(props: {
+const visitor = new Visitor();
+
+function Shader(props: {
   sdf: string;
   primitives: string;
   width: number | null;
@@ -57,36 +62,40 @@ export default function Shader(props: {
   uniforms?: any[];
   material?: Material;
 }) {
-  const [zoom, setZoom] = useState(1.5);
-  const zoomIncrement = 0.5;
-
-  const [dragging, setDragging] = useState(false);
-  const [draggingLastPos, setDraggingLastPos] = useState([0, 0]);
-  const [mousePos, setMousePos] = useState([0, 0]);
-  const [mouseDrag, setMouseDrag] = useState([0.0, 0.0]);
-  const [angle, setAngle] = useState([10, 0]);
-  const [material, setMaterial] = useState(defaultMaterial);
-  const [compileError, setCompileError] = useState(false);
-  const [shader, setShader] = useState<ShaderIdentifier>(defaultShader.helloGL);
-
   const { savedPrimitives } = useStore(selector(), shallow);
 
-  const visitor = new Visitor();
+  const [zoom, setZoom] = useState(1.5);
+  const zoomIncrement = 0.1;
+
+  const dragging = useRef(false);
+  const draggingLastPos = useRef([0, 0]);
+
+  const [angle, setAngle] = useState([10, 0]);
+  const [material, setMaterial] = useState(defaultMaterial);
+  
+  const [compileError, setCompileError] = useState(false);
+  const [shader, setShader] = useState<ShaderIdentifier>(
+    CreateShader(props.sdf, "").helloGL
+  );
+
+  useEffect(() => {
+    setCompileError(false);
+    setShader(CreateShader(props.sdf, "").helloGL);
+  }, [props.sdf]);
+
+  
   visitor.onSurfaceDrawError = (e: Error) => {
     if (props.onError) props.onError(e.message);
-    console.log("LOL", e.message, props.sdf);
+
+    console.warn(`ERROR COMPILING SHADER ${props.sdf}`);
     setCompileError(true);
     return true;
   };
 
   visitor.onSurfaceDrawEnd = () => {
+    console.log("as");
     setCompileError(false);
   };
-
-  useEffect(() => {
-    console.log(fs("sphere(p,1.0)", String(savedPrimitives)));
-    setShader(CreateShader("sphere(p,1.0)", "").helloGL );
-  }, []);
 
   function CreateShader(sdf: string, primitives: string) {
     return Shaders.create({
@@ -97,25 +106,24 @@ export default function Shader(props: {
   }
 
   const handleMouseMove = (e: any) => {
-    return;
-    const clamp = (num: number, min: number, max: number) =>
-      Math.min(Math.max(num, min), max);
+    // return;
 
-    let rect = e.currentTarget.getBoundingClientRect();
-    let x = (e.clientX - rect.left) / rect.width;
-    let y = (e.clientY - rect.top) / rect.height;
+    if (dragging.current) {
+      const clamp = (num: number, min: number, max: number) =>
+        Math.min(Math.max(num, min), max);
 
-    setMousePos([x, y]);
+      let rect = e.currentTarget.getBoundingClientRect();
+      let x = (e.clientX - rect.left) / rect.width;
+      let y = (e.clientY - rect.top) / rect.height;
 
-    if (dragging) {
-      let difX = x - draggingLastPos[0];
-      let difY = y - draggingLastPos[1];
+      // setMousePos([x, y]);
+      let difX = x - draggingLastPos.current[0];
+      let difY = y - draggingLastPos.current[1];
       difX *= 2.0;
 
       const newAng = [angle[0] + difX, clamp(angle[1] + difY, -1.5, 1.5)];
       setAngle(newAng);
-      setDraggingLastPos(mousePos);
-      console.log("ANGLE: ", [angle[0] + difX, angle[1] + difY]);
+      draggingLastPos.current = [x,y];
     }
   };
 
@@ -124,19 +132,19 @@ export default function Shader(props: {
 
     if (e.button === 0) {
       //left click
-      setDragging(true);
-      setDraggingLastPos(mousePos);
+      dragging.current = true;
+      // setDraggingLastPos(mousePos.current);
     } else if (e.button === 2) {
       // right click
     }
   };
 
   const handleMouseUp = (e: any) => {
-    setDragging(false);
+    dragging.current = false;
   };
 
   const handleMouseLeave = (e: any) => {
-    setDragging(false);
+    dragging.current = false;
   };
 
   const handleScroll = (e: any) => {
@@ -162,18 +170,17 @@ export default function Shader(props: {
       <div
         // ref={ref}
         style={{ height: "100%", width: "100%" }}
-        // onMouseMove={handleMouseMove}
-        // onMouseDown={handleMouseDown}
-        // onMouseUp={handleMouseUp}
-        // onMouseLeave={handleMouseLeave}
+        onMouseMove={handleMouseMove}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
       >
-        {/* <ReactScrollWheelHandler
-          timeout={0}
+        <ReactScrollWheelHandler
           preventScroll={true}
           upHandler={(e) => setZoom(zoom + zoomIncrement)}
           downHandler={(e) => setZoom(zoom - zoomIncrement)}
           disableSwipeWithMouse={true}
-        > */}
+        >
           <Surface
             visitor={visitor}
             width={props.width || 100}
@@ -182,8 +189,8 @@ export default function Shader(props: {
             <Node
               shader={shader}
               uniforms={{
-                u_resolution: [100, 100],
-                u_mouse: [0, 0],
+                u_resolution: [props.width, props.height],
+                // u_mouse: [0, 0],
                 u_specular: material.specular,
                 u_diffuse: material.diffuse,
                 u_ambient: material.ambient,
@@ -193,10 +200,13 @@ export default function Shader(props: {
               }}
             />
           </Surface>
-        {/* </ReactScrollWheelHandler> */}
+        </ReactScrollWheelHandler>
       </div>
     );
   }
 
-  return <Result/>;
+  return <Result />;
 }
+
+// export default Shader;
+export default memo(Shader);

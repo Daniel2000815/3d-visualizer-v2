@@ -26,7 +26,7 @@ export const fs = (sdf, primitives) => {
     uniform float u_smoothness;
 
     uniform vec2 u_resolution;
-    uniform vec2 u_mouse;
+    // uniform vec2 u_mouse;
     uniform vec2 u_cameraAng;
     uniform float u_zoom;
 
@@ -204,8 +204,8 @@ export const fs = (sdf, primitives) => {
 void main()
     {
         vec2 uv = (gl_FragCoord.xy - 0.5*u_resolution.xy) / u_resolution.y;
-        vec2 mouseUV = vec2(0.5);
-        mouseUV = u_mouse.xy/u_resolution.xy;  // [0,1]
+        // vec2 mouseUV = vec2(0.5);
+        // mouseUV = u_mouse.xy/u_resolution.xy;  // [0,1]
 
 
         vec3 backgroundColor = vec3(.835, 1.0, 1.0);

@@ -1,12 +1,13 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Handle } from "reactflow";
 import { shallow } from "zustand/shallow";
-import { tw } from "twind";
+import { apply, tw } from "twind";
 import { useStore } from "../../store";
 import CustomHandle from "./parts/CustomHandle";
 import Shader from "../../Shader/Shader";
 import { FiChevronUp, FiChevronDown } from "react-icons/fi";
 import Dropdown from "../../Components/Dropdown";
+import { useTheme } from '@nextui-org/react';
 
 const width = "200px";
 
@@ -14,53 +15,58 @@ const selector = (id) => (store) => ({
   setGain: (e) => store.updateNode(id, { gain: +e.target.value }),
 });
 
-export default function CustomNode({
+export function CustomNode({
   id,
   data,
+  children,
   nInputs,
   title,
   dropdownOptions,
   onChangeDropdownOption,
-  mainColor = "blue-500",
-  darkColor = "blue-800",
-  accentColor = "blue-900",
+  theme,
+
+
 }) {
   const { setGain } = useStore(selector(id), shallow);
-
   const [showMore, setShowMore] = React.useState(true);
-
+  useEffect(()=>{
+    console.log("WHAT X2 ", dropdownOptions);
+  }, [dropdownOptions])
   return (
     <div
-      className={tw(`rounded-lg bg-white shadow-xl border-${mainColor} border`)}
+      className={tw(`rounded-lg bg-white shadow-xl border-[${theme?.primary}] border`)}
       style={{ width }}
     >
       <p
         className={tw(
-          `rounded-t-md px-2 py-1 bg-${mainColor} text-white text-sm`
+          `rounded-t-md px-2 py-1 bg-[${theme?.primary}] text-white text-sm`
         )}
       >
         {title}
       </p>
       {showMore && (
-        <div className={tw("flex flex-col w-full items-center px-2 pt-1 pb-4")}>
+        <div className={`${tw("flex flex-col w-full items-center px-2 space-y-2  pt-1 pb-4")} nodrag`}>
           {dropdownOptions && (
             <Dropdown
               defaultValue={dropdownOptions[0]}
               onChange={onChangeDropdownOption}
               items={dropdownOptions}
               label={title}
+              theme={theme}
             />
-          ) }
-          <div className="nodrag">
-          <Shader />
-          </div>
+          )}
+            
+            {children}
+            {/* {data.sdf}       */}
+            <Shader sdf={data.sdf} width={180} height={100} />
+          
         </div>
       )}
 
       <button
         className={tw(
           "w-full rounded-b-md px-2 py-1 text-white text-sm flex items-center justify-center",
-          `bg-${mainColor} hover:bg-${darkColor} active:bg-${accentColor} focus:outline-none`,
+          `bg-[${theme?.primary}] hover:bg-[${theme?.dark}] active:bg-[${theme?.accent}] focus:outline-none`,
           "transition-colors duration-200"
         )}
         onClick={() => setShowMore(!showMore)}
@@ -78,6 +84,7 @@ export default function CustomNode({
         return (
           <div key={`${id}_targetHandleContainer_${i}`}>
             <CustomHandle
+            theme={theme}
               nodeId={id}
               inputNumber={`${i}`}
               type="target"
@@ -88,6 +95,7 @@ export default function CustomNode({
       })}
 
       <CustomHandle
+      theme={theme}
         nodeId={id}
         inputNumber="0"
         type="source"

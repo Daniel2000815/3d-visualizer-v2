@@ -2,6 +2,11 @@ import { applyNodeChanges, applyEdgeChanges } from "reactflow";
 import { nanoid } from "nanoid";
 import { create } from "zustand";
 import { InputMode } from "./Types/InputMode";
+import {
+  BooleanOperations,
+  DeformOperations,
+  TransformOperations,
+} from "./Types/NodeOperations";
 
 // import {
 //   isRunning,
@@ -15,10 +20,39 @@ import { InputMode } from "./Types/InputMode";
 
 export const useStore = create((set, get) => ({
   nodes: [
-    { id: "primitive", type: "primitive", position: { x: 0, y: 0 } },
+    {
+      id: "primitive",
+      type: "primitive",
+      position: { x: -150, y: 200 },
+      data: { sdf: "cube(p,1.0)", inputs: {}, children: [] },
+    },
+    {
+      id: "primitive2",
+      type: "primitive",
+      position: { x: -150, y: -200 },
+      data: { sdf: "cube(p,1.0)", inputs: new Map(), children: [] },
+    },
+    {
+      id: "deform",
+      type: "deform",
+      position: { x: 150, y: 200 },
+      data: { sdf: "", inputs: new Map(), children: [] },
+    },
+    {
+      id: "boolean",
+      type: "boolean",
+      position: { x: 150, y: -100 },
+      data: { sdf: "", inputs: new Map(), children: [] },
+    },
+    {
+      id: "transform",
+      type: "transform",
+      position: { x: 150, y: -400 },
+      data: { sdf: "", inputs: new Map(), children: [] },
+    },
   ],
-  edges: [
-  ],
+  edges: [],
+  needsToUpdate: { primitive: false, deform: false, boolean: false, primitive2: false, transform: false },
   primitives: [
     {
       id: "sphere",
@@ -75,42 +109,118 @@ export const useStore = create((set, get) => ({
 
   createNode(type, x, y) {
     const id = nanoid();
+    const data = { sdf: "", inputs: new Map(), children: [] }
+    const position = { x: x, y: y };
 
-    switch (type) {
-      case "osc": {
-        const data = { frequency: 440, type: "sine" };
-        const position = { x: 0, y: 0 };
+    set({ nodes: [...get().nodes, { id, type, data, position }] });
+    set({needsToUpdate: {...needsToUpdate, id: false}});
+    // switch (type) {
+    //   case "osc": {
+    //     const data = { frequency: 440, type: "sine" };
+    //     const position = { x: 0, y: 0 };
 
-        set({ nodes: [...get().nodes, { id, type, data, position }] });
+    //     set({ nodes: [...get().nodes, { id, type, data, position }] });
 
-        break;
-      }
+    //     break;
+    //   }
 
-      case "amp": {
-        const data = { gain: 0.5 };
-        const position = { x: 0, y: 0 };
+    //   case "amp": {
+    //     const data = { gain: 0.5 };
+    //     const position = { x: 0, y: 0 };
 
-        set({ nodes: [...get().nodes, { id, type, data, position }] });
+    //     set({ nodes: [...get().nodes, { id, type, data, position }] });
 
-        break;
-      }
-    }
+    //     break;
+    //   }
+
+      
+    // }
   },
 
   updateNode(id, data) {
     // update node logic -> update data
+    var sourceNode = null;
 
+    // Update and find source
     set({
-      nodes: get().nodes.map((node) =>
-        node.id === id
-          ? { ...node, data: Object.assign(node.data, data) }
-          : node
-      ),
+      nodes: get().nodes.map((node) => {
+        if (node.id === id) {
+          sourceNode = node;
+          return { ...node, data: Object.assign(node.data, data) };
+        } else {
+          return node;
+        }
+      }),
     });
+
+    // Update its children
+    set({
+      nodes: get().nodes.map((node) => {
+        if (sourceNode.data.children.includes(node.id)) {
+          
+          var newInputs = node.data.inputs;
+          newInputs.set(sourceNode.id,  sourceNode.data.sdf);
+          // newInputs[`${sourceNode.id}`] = sourceNode.data.sdf;
+          // console.log("ACTUALIZANDO ",  node.id, " INPUTS: ", newInputs);
+          get().setNeedsUpdate(node.id, true);
+          return {
+            ...node,
+            data: Object.assign(node.data, {
+              inputs: newInputs,
+            }),
+          };
+        } else {
+          return node;
+        }
+      }),
+    });
+
+    // const node = get().nodes.find(n => n.id === id);
+    // node.data.children.forEach(c => {
+    //   const child = get().nodes.find(n => n.id === child);
+    //     switch(child.type){
+    //       case "primitive":
+    //         // imposible
+    //         break;
+
+    //       case "boolean":
+    //         break;
+
+    //       case "deform":
+
+    //         break;
+
+    //       case "transform":
+    //         break;
+    //     }
+    // });
   },
 
   onNodesDelete(deleted) {
-    for (const { id } of deleted) {
+    for (const { id, data } of deleted) {
+      console.log("DATA:", data.children);
+      data.children.forEach(c => get().removeChild(id, c));
+      
+      
+    //   // Update its children
+    // set({
+    //   nodes: get().nodes.map((node) => {
+    //     if (data.children.includes(node.id)) {
+    //       var newInputs = node.data.inputs;
+    //       newInputs[`${sourceNode.id}`] = sourceNode.data.sdf;
+    //       console.log("ACTUALIZANDO ",  node.id, " INPUTS: ", newInputs);
+    //       get().setNeedsUpdate(node.id, true);
+    //       return {
+    //         ...node,
+    //         data: Object.assign(node.data, {
+    //           inputs: newInputs,
+    //         }),
+    //       };
+    //     } else {
+    //       return node;
+    //     }
+    //   }),
+    // });
     }
   },
 
@@ -122,15 +232,98 @@ export const useStore = create((set, get) => ({
 
   addEdge(data) {
     const id = nanoid(6);
-    const edge = { id, ...data };
+    const edge = { id, type: "custom", ...data };
+
+    const { source, target } = data;
 
     // connect logic
     set({ edges: [edge, ...get().edges] });
+
+    // añadir hijo al padre
+    const sourceNode = get().nodes.find((n) => n.id === source);
+    const targetNode = get().nodes.find((n) => n.id === target);
+
+    get().updateNode(source, {
+      children: sourceNode.data.children.concat(target),
+    });
+
+    // actualizar inputs del hijo
+    var newInputs = targetNode.data.inputs;
+    // newInputs[`${source}`] = sourceNode.data.sdf;
+    newInputs.set(source, sourceNode.data.sdf);
+    get().updateNode(target, { inputs: newInputs });
+    get().setNeedsUpdate(target, true);
+  },
+
+  setNeedsUpdate(id, val) {
+    set({ needsToUpdate: { ...get().needsToUpdate, [id]: val } });
+  },
+
+  /*
+  var newInputs = node.data.inputs;
+  newInputs[`${sourceNode.id}`] = sourceNode.data.sdf;
+  console.log("ACTUALIZANDO ",  node.id, " INPUTS: ", newInputs);
+  get().setNeedsUpdate(node.id, true);
+  return {
+    ...node,
+    data: Object.assign(node.data, {
+      inputs: newInputs,
+    }),
+  };
+
+  ----
+
+  get().updateNode(source, {
+      children: sourceNode.data.children.concat(target),
+    });
+
+  */
+
+  removeChild (parent, child) {
+    set({
+      nodes: get().nodes.filter((node) => {
+        if(node.id === parent){
+          return {
+            ...node,
+            data: Object.assign(node.data, {
+              children: node.data.children.filter(c => c!==child),
+            }),
+          };
+        }
+        else if(node.id === child){
+          var newInputs = node.data.inputs;
+          newInputs.delete(parent);
+          // newInputs[`${parent}`] = "";
+          // console.log("ACTUALIZANDO ",  node.id, " INPUTS: ", newInputs);
+          get().setNeedsUpdate(node.id, true);
+          return {
+            ...node,
+            data: Object.assign(node.data, {
+              inputs: newInputs,
+            }),
+          };
+        }
+        else{
+          return node;
+        }
+      }),
+    });
+  },
+
+  deleteEdge(id, source, target){
+    set({
+      edges: get().edges.filter((e) => e.id !== id),
+    });
+
+    console.log("new edges: ", get().edges);
+    get().removeChild(source, target);
   },
 
   onEdgesDelete(deleted) {
     for (const { source, target } of deleted) {
-      // edge delete logic
+      get().removeChild(source, target);
     }
+
+    console.log("se han borrado edges:", get().edges);
   },
 }));

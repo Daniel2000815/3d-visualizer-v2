@@ -1,13 +1,16 @@
+import "./init"
+
 import React from "react";
 import ReactDOM from "react-dom";
 import Graph from "./Graph/main";
 import { createRoot } from "react-dom/client";
+import { createTheme, NextUIProvider } from "@nextui-org/react"
+
+window.global = window
 
 function App() {
   return (
-    <div className="App">
       <Graph />
-    </div>
   );
 }
 

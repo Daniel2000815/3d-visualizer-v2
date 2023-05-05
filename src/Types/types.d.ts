@@ -27,6 +27,15 @@ declare global {
     defaultVal: number
   }
 
+  type Theme = {
+    light: string,
+    primary: string,
+    dark: string,
+    accent: string
+  }
+
   
+
+
 
 }

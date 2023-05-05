@@ -1,14 +1,13 @@
 import React, { memo } from "react";
 import { Handle, Position } from "reactflow";
-import { useTheme } from "@mui/material/styles";
-
+import { useTheme } from '@nextui-org/react';
 function CustomHandle(props: {
   nodeId: string;
   inputNumber: string;
   type: "source" | "target";
   style: any;
+  theme: Theme;
 }) {
-  const theme = useTheme();
   const radius = "10px";
   const margin = "-1px";
 
@@ -16,8 +15,8 @@ function CustomHandle(props: {
     ...props.style,
     width: `${radius}`,
     height: `${radius}`,
-    background: `${theme.palette.primary.light}`,
-    border: `1px solid ${theme.palette.primary.main}`,
+    background: `${props.theme.light}`,
+    border: `1px solid ${props.theme.primary}`,
   };
 
   // const id = newId('handle');

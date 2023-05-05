@@ -1,6 +1,8 @@
 import { Input } from "@nextui-org/react";
+import { nanoid } from "nanoid";
 
-export default function FloatInput(props: {
+
+export function FloatInput(props: {
   initialVal: string | number;
   onChange: (n: number) => void;
   label: string;
